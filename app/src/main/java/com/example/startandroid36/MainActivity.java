@@ -13,6 +13,7 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 
 public class MainActivity extends Activity implements OnClickListener {
 
@@ -26,6 +27,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
     Button btnAll, btnFunc, btnPeople, btnSort, btnGroup, btnHaving;
     EditText etFunc, etPeople, etRegionPeople;
+    TextView textView;
     RadioGroup rgSort;
 
     DBHelper dbHelper;
@@ -37,29 +39,31 @@ public class MainActivity extends Activity implements OnClickListener {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        btnAll = (Button) findViewById(R.id.btnAll);
+        btnAll =findViewById(R.id.btnAll);
         btnAll.setOnClickListener(this);
 
-        btnFunc = (Button) findViewById(R.id.btnFunc);
+        btnFunc = findViewById(R.id.btnFunc);
         btnFunc.setOnClickListener(this);
 
-        btnPeople = (Button) findViewById(R.id.btnPeople);
+        btnPeople =  findViewById(R.id.btnPeople);
         btnPeople.setOnClickListener(this);
 
-        btnSort = (Button) findViewById(R.id.btnSort);
+        btnSort =  findViewById(R.id.btnSort);
         btnSort.setOnClickListener(this);
 
-        btnGroup = (Button) findViewById(R.id.btnGroup);
+        btnGroup =  findViewById(R.id.btnGroup);
         btnGroup.setOnClickListener(this);
 
-        btnHaving = (Button) findViewById(R.id.btnHaving);
+        btnHaving =  findViewById(R.id.btnHaving);
         btnHaving.setOnClickListener(this);
 
-        etFunc = (EditText) findViewById(R.id.etFunc);
-        etPeople = (EditText) findViewById(R.id.etPeople);
-        etRegionPeople = (EditText) findViewById(R.id.etRegionPeople);
+        etFunc =  findViewById(R.id.etFunc);
+        etPeople =  findViewById(R.id.etPeople);
+        etRegionPeople = findViewById(R.id.etRegionPeople);
 
-        rgSort = (RadioGroup) findViewById(R.id.rgSort);
+        textView = findViewById(R.id.textViewOutput);
+
+        rgSort = findViewById(R.id.rgSort);
 
         dbHelper = new DBHelper(this);
         // подключаемся к базе
@@ -103,27 +107,27 @@ public class MainActivity extends Activity implements OnClickListener {
         String orderBy = null;
 
         // курсор
-        Cursor c = null;
+        Cursor cursor = null;
 
         // определяем нажатую кнопку
         switch (v.getId()) {
             // Все записи
             case R.id.btnAll:
                 Log.d(LOG_TAG, "--- Все записи ---");
-                c = db.query("mytable", null, null, null, null, null, null);
+                cursor = db.query("mytable", null, null, null, null, null, null);
                 break;
             // Функция
             case R.id.btnFunc:
                 Log.d(LOG_TAG, "--- Функция " + sFunc + " ---");
                 columns = new String[] { sFunc };
-                c = db.query("mytable", columns, null, null, null, null, null);
+                cursor = db.query("mytable", columns, null, null, null, null, null);
                 break;
             // Население больше, чем
             case R.id.btnPeople:
                 Log.d(LOG_TAG, "--- Население больше " + sPeople + " ---");
                 selection = "people > ?";
                 selectionArgs = new String[] { sPeople };
-                c = db.query("mytable", null, selection, selectionArgs, null, null,
+                cursor = db.query("mytable", null, selection, selectionArgs, null, null,
                         null);
                 break;
             // Население по региону
@@ -131,7 +135,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 Log.d(LOG_TAG, "--- Население по региону ---");
                 columns = new String[] { "region", "sum(people) as people" };
                 groupBy = "region";
-                c = db.query("mytable", columns, null, null, groupBy, null, null);
+                cursor = db.query("mytable", columns, null, null, groupBy, null, null);
                 break;
             // Население по региону больше чем
             case R.id.btnHaving:
@@ -140,7 +144,7 @@ public class MainActivity extends Activity implements OnClickListener {
                 columns = new String[] { "region", "sum(people) as people" };
                 groupBy = "region";
                 having = "sum(people) > " + sRegionPeople;
-                c = db.query("mytable", columns, null, null, groupBy, having, null);
+                cursor = db.query("mytable", columns, null, null, groupBy, having, null);
                 break;
             // Сортировка
             case R.id.btnSort:
@@ -162,24 +166,27 @@ public class MainActivity extends Activity implements OnClickListener {
                         orderBy = "region";
                         break;
                 }
-                c = db.query("mytable", null, null, null, null, null, orderBy);
+                cursor = db.query("mytable", null, null, null, null, null, orderBy);
                 break;
         }
-
-        if (c != null) {
-            if (c.moveToFirst()) {
+        textView.setText("");
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
                 String str;
+
                 do {
                     str = "";
-                    for (String cn : c.getColumnNames()) {
+                    for (String cn : cursor.getColumnNames()) {
                         str = str.concat(cn + " = "
-                                + c.getString(c.getColumnIndex(cn)) + "; ");
+                                + cursor.getString(cursor.getColumnIndex(cn)) + ";   ");
+
                     }
                     Log.d(LOG_TAG, str);
+                    textView.setText(textView.getText() +"\n"+ str);
 
-                } while (c.moveToNext());
+                } while (cursor.moveToNext());
             }
-            c.close();
+            cursor.close();
         } else
             Log.d(LOG_TAG, "Cursor is null");
 
