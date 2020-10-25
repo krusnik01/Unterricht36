@@ -14,84 +14,78 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements OnClickListener {
 
     final String LOG_TAG = "myLogs";
 
-    String name[] = { "Китай", "США", "Бразилия", "Россия", "Япония",
-            "Германия", "Египет", "Италия", "Франция", "Канада" };
-    int people[] = { 1400, 311, 195, 142, 128, 82, 80, 60, 66, 35 };
-    String region[] = { "Азия", "Америка", "Америка", "Европа", "Азия",
-            "Европа", "Африка", "Европа", "Европа", "Америка" };
+    String name[] = {"Китай", "США", "Бразилия", "Россия", "Япония",
+            "Германия", "Египет", "Италия", "Франция", "Канада"};
+    int people[] = {1400, 311, 195, 142, 128, 82, 80, 60, 66, 35};
+    String region[] = {"Азия", "Америка", "Америка", "Европа", "Азия",
+            "Европа", "Африка", "Европа", "Европа", "Америка"};
 
     Button btnAll, btnFunc, btnPeople, btnSort, btnGroup, btnHaving;
     EditText etFunc, etPeople, etRegionPeople;
     TextView textView;
     RadioGroup rgSort;
 
-    DBHelper dbHelper;
-    SQLiteDatabase db;
+  /*  DBHelper dbHelper;
+    SQLiteDatabase db;*/
+    private DBJob JobBD; //работаем с бд
 
-    /** Called when the activity is first created. */
+    /**
+     * Called when the activity is first created.
+     */
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        btnAll =findViewById(R.id.btnAll);
+        btnAll = findViewById(R.id.btnAll);
         btnAll.setOnClickListener(this);
 
         btnFunc = findViewById(R.id.btnFunc);
         btnFunc.setOnClickListener(this);
 
-        btnPeople =  findViewById(R.id.btnPeople);
+        btnPeople = findViewById(R.id.btnPeople);
         btnPeople.setOnClickListener(this);
 
-        btnSort =  findViewById(R.id.btnSort);
+        btnSort = findViewById(R.id.btnSort);
         btnSort.setOnClickListener(this);
 
-        btnGroup =  findViewById(R.id.btnGroup);
+        btnGroup = findViewById(R.id.btnGroup);
         btnGroup.setOnClickListener(this);
 
-        btnHaving =  findViewById(R.id.btnHaving);
+        btnHaving = findViewById(R.id.btnHaving);
         btnHaving.setOnClickListener(this);
 
-        etFunc =  findViewById(R.id.etFunc);
-        etPeople =  findViewById(R.id.etPeople);
+        etFunc = findViewById(R.id.etFunc);
+        etPeople = findViewById(R.id.etPeople);
         etRegionPeople = findViewById(R.id.etRegionPeople);
 
         textView = findViewById(R.id.textViewOutput);
 
         rgSort = findViewById(R.id.rgSort);
-
-        dbHelper = new DBHelper(this);
-        // подключаемся к базе
-        db = dbHelper.getWritableDatabase();
-
-        // проверка существования записей
-        Cursor c = db.query("mytable", null, null, null, null, null, null);
-        if (c.getCount() == 0) {
+        JobBD = new DBJob(getApplicationContext());
+        textView.setText("");
+        String antwortet = JobBD.getData().toString();
+        if (antwortet.equalsIgnoreCase("[База пуста]")) {
             ContentValues cv = new ContentValues();
-            // заполним таблицу
             for (int i = 0; i < 10; i++) {
                 cv.put("name", name[i]);
                 cv.put("people", people[i]);
                 cv.put("region", region[i]);
-                Log.d(LOG_TAG, "id = " + db.insert("mytable", null, cv));
+                JobBD.Insert(cv);
             }
-        }
-        c.close();
-        dbHelper.close();
-        // эмулируем нажатие кнопки btnAll
-        onClick(btnAll);
+            Toast.makeText(this, "Подготавливаем БД", Toast.LENGTH_SHORT).show();
+        } else Toast.makeText(this, "База готова к работе", Toast.LENGTH_SHORT).show();
 
     }
 
     public void onClick(View v) {
-
-        // подключаемся к базе
-        db = dbHelper.getWritableDatabase();
+        textView.setText("");
 
         // данные с экрана
         String sFunc = etFunc.getText().toString();
@@ -106,45 +100,38 @@ public class MainActivity extends Activity implements OnClickListener {
         String having = null;
         String orderBy = null;
 
-        // курсор
-        Cursor cursor = null;
 
         // определяем нажатую кнопку
         switch (v.getId()) {
             // Все записи
             case R.id.btnAll:
-                Log.d(LOG_TAG, "--- Все записи ---");
-                cursor = db.query("mytable", null, null, null, null, null, null);
+                textView.setText(JobBD.getData().toString());
                 break;
             // Функция
             case R.id.btnFunc:
-                Log.d(LOG_TAG, "--- Функция " + sFunc + " ---");
-                columns = new String[] { sFunc };
-                cursor = db.query("mytable", columns, null, null, null, null, null);
+                columns = new String[]{sFunc};
+               // JobBD.getQuery(columns, selection, selectionArgs, groupBy, having, orderBy); //либо так
+                JobBD.getQuery(columns, null, null, null, null, null); //либо так
                 break;
             // Население больше, чем
             case R.id.btnPeople:
-                Log.d(LOG_TAG, "--- Население больше " + sPeople + " ---");
                 selection = "people > ?";
-                selectionArgs = new String[] { sPeople };
-                cursor = db.query("mytable", null, selection, selectionArgs, null, null,
-                        null);
+                selectionArgs = new String[]{sPeople};
+                JobBD.getQuery(null, selection, selectionArgs, null, null, null); //либо так
                 break;
             // Население по региону
             case R.id.btnGroup:
-                Log.d(LOG_TAG, "--- Население по региону ---");
-                columns = new String[] { "region", "sum(people) as people" };
+                columns = new String[]{"region", "sum(people) as people"};
                 groupBy = "region";
-                cursor = db.query("mytable", columns, null, null, groupBy, null, null);
+                JobBD.getQuery(columns, null, null, groupBy, null, null);
                 break;
             // Население по региону больше чем
             case R.id.btnHaving:
-                Log.d(LOG_TAG, "--- Регионы с населением больше " + sRegionPeople
-                        + " ---");
-                columns = new String[] { "region", "sum(people) as people" };
+
+                columns = new String[]{"region", "sum(people) as people"};
                 groupBy = "region";
                 having = "sum(people) > " + sRegionPeople;
-                cursor = db.query("mytable", columns, null, null, groupBy, having, null);
+                JobBD.getQuery( columns, null, null, groupBy, having, null);
                 break;
             // Сортировка
             case R.id.btnSort:
@@ -152,65 +139,25 @@ public class MainActivity extends Activity implements OnClickListener {
                 switch (rgSort.getCheckedRadioButtonId()) {
                     // наименование
                     case R.id.rName:
-                        Log.d(LOG_TAG, "--- Сортировка по наименованию ---");
+
                         orderBy = "name";
                         break;
                     // население
                     case R.id.rPeople:
-                        Log.d(LOG_TAG, "--- Сортировка по населению ---");
+
                         orderBy = "people";
                         break;
                     // регион
                     case R.id.rRegion:
-                        Log.d(LOG_TAG, "--- Сортировка по региону ---");
+
                         orderBy = "region";
                         break;
                 }
-                cursor = db.query("mytable", null, null, null, null, null, orderBy);
+                JobBD.getQuery( null, null, null, null, null, orderBy);
                 break;
         }
-        textView.setText("");
-        if (cursor != null) {
-            if (cursor.moveToFirst()) {
-                String str;
 
-                do {
-                    str = "";
-                    for (String cn : cursor.getColumnNames()) {
-                        str = str.concat(cn + " = "
-                                + cursor.getString(cursor.getColumnIndex(cn)) + ";   ");
-
-                    }
-                    Log.d(LOG_TAG, str);
-                    textView.setText(textView.getText() +"\n"+ str);
-
-                } while (cursor.moveToNext());
-            }
-            cursor.close();
-        } else
-            Log.d(LOG_TAG, "Cursor is null");
-
-        dbHelper.close();
     }
 
-    class DBHelper extends SQLiteOpenHelper {
-
-        public DBHelper(Context context) {
-            // конструктор суперкласса
-            super(context, "myDB", null, 1);
-        }
-
-        public void onCreate(SQLiteDatabase db) {
-            Log.d(LOG_TAG, "--- onCreate database ---");
-            // создаем таблицу с полями
-            db.execSQL("create table mytable ("
-                    + "id integer primary key autoincrement," + "name text,"
-                    + "people integer," + "region text" + ");");
-        }
-
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
-        }
-    }
 
 }
